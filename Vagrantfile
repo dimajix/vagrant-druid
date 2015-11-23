@@ -20,7 +20,7 @@ boxes = [
   { :name => :drrealtime, :ip => '10.110.55.77', :cpus =>1, :memory => 1024, :instance => 'm1.small' },
 ]
 
-BASE_NAME = 'cloudera'
+BASE_NAME = 'druid'
 DOMAIN_NAME = "%s.vagrant" % BASE_NAME
 LXC_BRIDGE = 'lxcbr0'
 AWS_REGION = ''

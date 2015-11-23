@@ -127,9 +127,86 @@ node 'namenode' {
 }
 
 
+node 'drbroker' {
+  include hadoop_config
+  
+  # client
+  include hadoop::frontend
+  # mysql client
+  include mysql::client
+
+  Class['hadoop::common::config'] -> 
+  Class['hadoop::frontend']
+}
+
+
+node 'drcoord' {
+  include hadoop_config
+  
+  # client
+  include hadoop::frontend
+  # mysql client
+  include mysql::client
+
+  Class['hadoop::common::config'] -> 
+  Class['hadoop::frontend']
+}
+
+
+node 'drhistory' {
+  include hadoop_config
+  
+  # client
+  include hadoop::frontend
+  # mysql client
+  include mysql::client
+
+  Class['hadoop::common::config'] -> 
+  Class['hadoop::frontend']
+}
+
+
+node 'droverlord' {
+  include hadoop_config
+  
+  # client
+  include hadoop::frontend
+  # mysql client
+  include mysql::client
+
+  Class['hadoop::common::config'] -> 
+  Class['hadoop::frontend']
+}
+
+
+node 'drmiddle' {
+  include hadoop_config
+  
+  # client
+  include hadoop::frontend
+  # mysql client
+  include mysql::client
+
+  Class['hadoop::common::config'] -> 
+  Class['hadoop::frontend']
+}
+
+
+node 'drrealtime' {
+  include hadoop_config
+  
+  # client
+  include hadoop::frontend
+  # mysql client
+  include mysql::client
+
+  Class['hadoop::common::config'] -> 
+  Class['hadoop::frontend']
+}
+
+
 node 'client' {
   include hadoop_config
-  include impala_config
   include spark_config
 
   # client
