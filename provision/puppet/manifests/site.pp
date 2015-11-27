@@ -115,6 +115,25 @@ class spark_config {
 }
 
 
+class druid_config {
+  include hadoop_config
+
+  class { 'druid':
+    version     => '0.8.2',
+    install_dir => '/opt',
+    config_dir  => '/etc/druid',
+    storage_type => 'hdfs',
+    hdfs_directory => '/user/druid',
+    extensions_coordinates => ['io.druid.extensions:mysql-metadata-storage'],
+    metadata_storage_type => 'mysql',
+    metadata_storage_connector_user => 'druid',
+    metadata_storage_connector_password => 'druid',
+    metadata_storage_connector_uri => 'jdbc:mysql://localhost:3306/druid?characterEncoding=UTF-8',
+    zk_service_host => "zookeeper1.${domain}"
+  }
+}
+
+
 node 'namenode' {
   include hadoop_config
   include spark_config
@@ -129,11 +148,14 @@ node 'namenode' {
 
 node 'drbroker' {
   include hadoop_config
+  include druid_config
   
   # client
   include hadoop::frontend
   # mysql client
   include mysql::client
+  # druid broker
+  include druid::broker
 
   Class['hadoop::common::config'] -> 
   Class['hadoop::frontend']
@@ -142,11 +164,14 @@ node 'drbroker' {
 
 node 'drcoord' {
   include hadoop_config
+  include druid_config
   
   # client
   include hadoop::frontend
   # mysql client
   include mysql::client
+  # druid coordinator
+  include druid::coordinator
 
   Class['hadoop::common::config'] -> 
   Class['hadoop::frontend']
@@ -155,11 +180,14 @@ node 'drcoord' {
 
 node 'drhistory' {
   include hadoop_config
+  include druid_config
   
   # client
   include hadoop::frontend
   # mysql client
   include mysql::client
+  # druid coordinator
+  include druid::historical
 
   Class['hadoop::common::config'] -> 
   Class['hadoop::frontend']
@@ -168,11 +196,14 @@ node 'drhistory' {
 
 node 'droverlord' {
   include hadoop_config
+  include druid_config
   
   # client
   include hadoop::frontend
   # mysql client
   include mysql::client
+  # druid indexing overlord
+  include druid::indexing::overlord
 
   Class['hadoop::common::config'] -> 
   Class['hadoop::frontend']
@@ -181,11 +212,14 @@ node 'droverlord' {
 
 node 'drmiddle' {
   include hadoop_config
+  include druid_config
   
   # client
   include hadoop::frontend
   # mysql client
   include mysql::client
+  # druid indexing middle manager
+  include druid::indexing::middle_manager
 
   Class['hadoop::common::config'] -> 
   Class['hadoop::frontend']
@@ -194,11 +228,14 @@ node 'drmiddle' {
 
 node 'drrealtime' {
   include hadoop_config
+  include druid_config
   
   # client
   include hadoop::frontend
   # mysql client
   include mysql::client
+  # druid realtime
+  include druid::realtime
 
   Class['hadoop::common::config'] -> 
   Class['hadoop::frontend']
@@ -263,6 +300,14 @@ node mysql {
     root_password           => '1234',
     remove_default_accounts => true,
     override_options => { 'mysqld' => { 'bind-address' => '0.0.0.0' } }
+  }
+
+  # Druid metastore database
+  mysql::db { 'druid':
+    user     => 'druid',
+    password => 'druid',
+    host     => '%',
+    grant    => ['CREATE', 'SELECT', 'INSERT', 'UPDATE', 'DELETE']
   }
 }
 
