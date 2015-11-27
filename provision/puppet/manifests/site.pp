@@ -222,7 +222,9 @@ node 'droverlord' {
   # mysql client
   include mysql::client
   # druid indexing overlord
-  include druid::indexing::overlord
+  class { 'druid::indexing::overlord' :
+    runner_type => 'remote'
+  }
 
   Class['hadoop::common::config'] -> 
   Class['hadoop::frontend']
@@ -238,7 +240,11 @@ node 'drmiddle' {
   # mysql client
   include mysql::client
   # druid indexing middle manager
-  include druid::indexing::middle_manager
+  class { 'druid::indexing::middle_manager':
+    fork_properties => {
+      "druid.processing.numThreads" => 4,
+    }
+  }
 
   Class['hadoop::common::config'] -> 
   Class['hadoop::frontend']
