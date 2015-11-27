@@ -124,11 +124,12 @@ class druid_config {
     config_dir  => '/etc/druid',
     storage_type => 'hdfs',
     hdfs_directory => '/user/druid',
+    extensions_local_repository => '/opt/druid/extensions-repo',
     extensions_coordinates => ['io.druid.extensions:mysql-metadata-storage'],
     metadata_storage_type => 'mysql',
     metadata_storage_connector_user => 'druid',
     metadata_storage_connector_password => 'druid',
-    metadata_storage_connector_uri => 'jdbc:mysql://localhost:3306/druid?characterEncoding=UTF-8',
+    metadata_storage_connector_uri => "jdbc:mysql://mysql.${domain}:3306/druid?characterEncoding=UTF-8",
     zk_service_host => "zookeeper1.${domain}"
   }
 }
@@ -155,7 +156,9 @@ node 'drbroker' {
   # mysql client
   include mysql::client
   # druid broker
-  include druid::broker
+  class { 'druid::broker':
+    processing_num_threads => 4
+  }
 
   Class['hadoop::common::config'] -> 
   Class['hadoop::frontend']
@@ -187,7 +190,23 @@ node 'drhistory' {
   # mysql client
   include mysql::client
   # druid coordinator
-  include druid::historical
+  class { 'druid::historical':
+    processing_num_threads => 4,
+    segment_cache_info_dir => '/var/cache/druid/info',
+    segment_cache_locations => [ {'path' => '/var/cache/druid/segments', 'maxSize' => '1000000000'} ]
+  }
+
+  file { '/var/cache/druid':
+    ensure  => directory,
+  }
+  file { '/var/cache/druid/info':
+    ensure  => directory,
+    require => File['/var/cache/druid']
+  }
+  file { '/var/cache/druid/segments':
+    ensure  => directory,
+    require => File['/var/cache/druid']
+  }
 
   Class['hadoop::common::config'] -> 
   Class['hadoop::frontend']
@@ -235,7 +254,9 @@ node 'drrealtime' {
   # mysql client
   include mysql::client
   # druid realtime
-  include druid::realtime
+  class { 'druid::realtime':
+    processing_num_threads => 4,
+  }
 
   Class['hadoop::common::config'] -> 
   Class['hadoop::frontend']
