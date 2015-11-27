@@ -266,6 +266,7 @@ node 'drrealtime' {
 node 'client' {
   include hadoop_config
   include spark_config
+  include druid_config
 
   # client
   include hadoop::frontend
