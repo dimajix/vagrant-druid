@@ -59,7 +59,12 @@ class hadoop_config {
         'hadoop.proxyuser.oozie.groups' => '*',
         'hadoop.proxyuser.oozie.hosts'  => '*',
         # Limit CPU usage
-        'yarn.nodemanager.resource.cpu-vcores' => '4',
+        'yarn.nodemanager.resource.cpu-vcores' => '6',
+        'yarn.nodemanager.resource.memory-mb' => '8192',
+        'mapreduce.map.memory.mb' => '2048',
+        'mapreduce.reduce.memory.mb' => '4096',
+        'mapreduce.map.java.opts' => '-server -Xmx1536m -Duser.timezone=UTC -Dfile.encoding=UTF-8',
+        'mapreduce.reduce.java.opts' => '-server -Xmx1536m -Duser.timezone=UTC -Dfile.encoding=UTF-8',
         # Enable log aggregation
         'yarn.log-aggregation-enable' => 'true',
         'yarn.log.server.url' => 'http://${yarn.timeline-service.webapp.address}/jobhistory/logs',
@@ -125,6 +130,7 @@ class druid_config {
     storage_type => 'hdfs',
     hdfs_directory => '/user/druid',
     extensions_local_repository => '/opt/druid/extensions-repo',
+    extensions_remote_repositories => ['http://central.maven.org/maven2/', 'https://metamx.artifactoryonline.com/metamx/pub-libs-releases-local'],
     extensions_coordinates => ['io.druid.extensions:mysql-metadata-storage'],
     selectors_indexing_service_name => 'overlord',
     metadata_storage_type => 'mysql',
@@ -132,6 +138,10 @@ class druid_config {
     metadata_storage_connector_password => 'druid',
     metadata_storage_connector_uri => "jdbc:mysql://mysql.${domain}:3306/druid?characterEncoding=UTF-8",
     zk_service_host => "zookeeper1.${domain}"
+  }
+  class { 'druid::indexing': 
+    logs_type => 'file',
+    local_logs_directory => '/var/log/druid/indexing',
   }
 }
 
@@ -253,6 +263,15 @@ node 'drmiddle' {
     fork_properties => {
       "druid.processing.numThreads" => 4,
     }
+  }
+
+  file { "/var/log/druid":
+        ensure  => directory,
+        mode    => 'u=rwx,go=rx'
+  } ->
+  file { "/var/log/druid/indexing":
+        ensure  => directory,
+        mode    => 'u=rwx,go=rx'
   }
 
   Class['hadoop::common::config'] -> 
