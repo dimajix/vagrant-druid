@@ -126,6 +126,7 @@ class druid_config {
     hdfs_directory => '/user/druid',
     extensions_local_repository => '/opt/druid/extensions-repo',
     extensions_coordinates => ['io.druid.extensions:mysql-metadata-storage'],
+    selectors_indexing_service_name => 'overlord',
     metadata_storage_type => 'mysql',
     metadata_storage_connector_user => 'druid',
     metadata_storage_connector_password => 'druid',
@@ -157,7 +158,8 @@ node 'drbroker' {
   include mysql::client
   # druid broker
   class { 'druid::broker':
-    processing_num_threads => 4
+    service => 'broker',
+    processing_num_threads => 4,
   }
 
   Class['hadoop::common::config'] -> 
@@ -174,7 +176,9 @@ node 'drcoord' {
   # mysql client
   include mysql::client
   # druid coordinator
-  include druid::coordinator
+  class { 'druid::coordinator':
+    service => 'coordinator',
+  }
 
   Class['hadoop::common::config'] -> 
   Class['hadoop::frontend']
@@ -191,6 +195,7 @@ node 'drhistory' {
   include mysql::client
   # druid coordinator
   class { 'druid::historical':
+    service => 'historical',
     processing_num_threads => 4,
     segment_cache_info_dir => '/var/cache/druid/info',
     segment_cache_locations => [ {'path' => '/var/cache/druid/segments', 'maxSize' => '1000000000'} ]
@@ -223,6 +228,7 @@ node 'droverlord' {
   include mysql::client
   # druid indexing overlord
   class { 'druid::indexing::overlord' :
+    service => 'overlord',
     runner_type => 'remote'
   }
 
@@ -241,6 +247,9 @@ node 'drmiddle' {
   include mysql::client
   # druid indexing middle manager
   class { 'druid::indexing::middle_manager':
+    service => 'middlemanager',
+    host => "${fqdn}",
+    worker_ip => "${ipaddress}",
     fork_properties => {
       "druid.processing.numThreads" => 4,
     }
@@ -261,6 +270,7 @@ node 'drrealtime' {
   include mysql::client
   # druid realtime
   class { 'druid::realtime':
+    service => 'realtime',
     processing_num_threads => 4,
   }
 
