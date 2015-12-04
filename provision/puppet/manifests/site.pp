@@ -65,6 +65,8 @@ class hadoop_config {
         'mapreduce.reduce.memory.mb' => '4096',
         'mapreduce.map.java.opts' => '-server -Xmx1536m -Duser.timezone=UTC -Dfile.encoding=UTF-8',
         'mapreduce.reduce.java.opts' => '-server -Xmx1536m -Duser.timezone=UTC -Dfile.encoding=UTF-8',
+        # Disable resource checks
+        'yarn.nodemanager.disk-health-checker.max-disk-utilization-per-disk-percentage' => '99',
         # Enable log aggregation
         'yarn.log-aggregation-enable' => 'true',
         'yarn.log.server.url' => 'http://${yarn.timeline-service.webapp.address}/jobhistory/logs',
@@ -131,7 +133,7 @@ class druid_config {
     hdfs_directory => '/user/druid',
     extensions_local_repository => '/opt/druid/extensions-repo',
     extensions_remote_repositories => ['http://central.maven.org/maven2/', 'https://metamx.artifactoryonline.com/metamx/pub-libs-releases-local'],
-    extensions_coordinates => ['io.druid.extensions:mysql-metadata-storage'],
+    extensions_coordinates => ['io.druid.extensions:mysql-metadata-storage','io.druid.extensions:druid-hdfs-storage'],
     selectors_indexing_service_name => 'overlord',
     metadata_storage_type => 'mysql',
     metadata_storage_connector_user => 'druid',
@@ -207,6 +209,7 @@ node 'drhistory' {
   class { 'druid::historical':
     service => 'historical',
     processing_num_threads => 4,
+    server_max_size => '1000000000000',
     segment_cache_info_dir => '/var/cache/druid/info',
     segment_cache_locations => [ {'path' => '/var/cache/druid/segments', 'maxSize' => '1000000000'} ]
   }
@@ -259,6 +262,8 @@ node 'drmiddle' {
   class { 'druid::indexing::middle_manager':
     service => 'middlemanager',
     host => "${fqdn}",
+    task_base_dir => '/tmp/druid',
+    task_base_task_dir => '/tmp/druid/persistent/tasks',
     worker_ip => "${ipaddress}",
     fork_properties => {
       "druid.processing.numThreads" => 4,
