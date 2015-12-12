@@ -15,6 +15,13 @@ For best results, you should also install the Vagrant plugin `vagrant-hostmanage
     
 This neat plugin will make sure that every nodein your cluster gets a `hosts` file containing all other nodes of your Vagrant virtual cluster. This way you do not need to have any DNS bindings for your hosts, and you can simply rely on a DHCP server for assigning IP addresses.
 
+## Setup Dependencies
+
+    sudo apt-get install zlib1g-dev lxc vagrant
+    vagrant plugin install vagrant-hostmanager --plugin-version=1.5.0
+    vagrant plugin install vagrant-lxc
+
+
 # Starting
 
 In order to start the cluster, simply go into the root directory and run

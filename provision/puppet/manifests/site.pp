@@ -59,7 +59,7 @@ class hadoop_config {
         'hadoop.proxyuser.oozie.groups' => '*',
         'hadoop.proxyuser.oozie.hosts'  => '*',
         # Limit CPU usage
-        'yarn.nodemanager.resource.cpu-vcores' => '6',
+        'yarn.nodemanager.resource.cpu-vcores' => '4',
         'yarn.nodemanager.resource.memory-mb' => '8192',
         'mapreduce.map.memory.mb' => '2048',
         'mapreduce.reduce.memory.mb' => '4096',
