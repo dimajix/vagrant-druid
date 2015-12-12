@@ -60,6 +60,13 @@ class hadoop_config {
         'hadoop.proxyuser.oozie.hosts'  => '*',
         # Limit CPU usage
         'yarn.nodemanager.resource.cpu-vcores' => '4',
+        'yarn.nodemanager.resource.memory-mb' => '8192',
+        'mapreduce.map.memory.mb' => '2048',
+        'mapreduce.reduce.memory.mb' => '4096',
+        'mapreduce.map.java.opts' => '-server -Xmx1536m -Duser.timezone=UTC -Dfile.encoding=UTF-8',
+        'mapreduce.reduce.java.opts' => '-server -Xmx1536m -Duser.timezone=UTC -Dfile.encoding=UTF-8',
+        # Disable resource checks
+        'yarn.nodemanager.disk-health-checker.max-disk-utilization-per-disk-percentage' => '99',
         # Enable log aggregation
         'yarn.log-aggregation-enable' => 'true',
         'yarn.log.server.url' => 'http://${yarn.timeline-service.webapp.address}/jobhistory/logs',
@@ -124,12 +131,19 @@ class druid_config {
     config_dir  => '/etc/druid',
     storage_type => 'hdfs',
     hdfs_directory => '/user/druid',
-    extensions_coordinates => ['io.druid.extensions:mysql-metadata-storage'],
+    extensions_local_repository => '/opt/druid/extensions-repo',
+    extensions_remote_repositories => ['http://central.maven.org/maven2/', 'https://metamx.artifactoryonline.com/metamx/pub-libs-releases-local'],
+    extensions_coordinates => ['io.druid.extensions:mysql-metadata-storage','io.druid.extensions:druid-hdfs-storage'],
+    selectors_indexing_service_name => 'overlord',
     metadata_storage_type => 'mysql',
     metadata_storage_connector_user => 'druid',
     metadata_storage_connector_password => 'druid',
-    metadata_storage_connector_uri => 'jdbc:mysql://localhost:3306/druid?characterEncoding=UTF-8',
+    metadata_storage_connector_uri => "jdbc:mysql://mysql.${domain}:3306/druid?characterEncoding=UTF-8",
     zk_service_host => "zookeeper1.${domain}"
+  }
+  class { 'druid::indexing': 
+    logs_type => 'file',
+    local_logs_directory => '/var/log/druid/indexing',
   }
 }
 
@@ -155,7 +169,10 @@ node 'drbroker' {
   # mysql client
   include mysql::client
   # druid broker
-  include druid::broker
+  class { 'druid::broker':
+    service => 'broker',
+    processing_num_threads => 4,
+  }
 
   Class['hadoop::common::config'] -> 
   Class['hadoop::frontend']
@@ -171,7 +188,9 @@ node 'drcoord' {
   # mysql client
   include mysql::client
   # druid coordinator
-  include druid::coordinator
+  class { 'druid::coordinator':
+    service => 'coordinator',
+  }
 
   Class['hadoop::common::config'] -> 
   Class['hadoop::frontend']
@@ -187,7 +206,25 @@ node 'drhistory' {
   # mysql client
   include mysql::client
   # druid coordinator
-  include druid::historical
+  class { 'druid::historical':
+    service => 'historical',
+    processing_num_threads => 4,
+    server_max_size => '1000000000000',
+    segment_cache_info_dir => '/var/cache/druid/info',
+    segment_cache_locations => [ {'path' => '/var/cache/druid/segments', 'maxSize' => '1000000000'} ]
+  }
+
+  file { '/var/cache/druid':
+    ensure  => directory,
+  }
+  file { '/var/cache/druid/info':
+    ensure  => directory,
+    require => File['/var/cache/druid']
+  }
+  file { '/var/cache/druid/segments':
+    ensure  => directory,
+    require => File['/var/cache/druid']
+  }
 
   Class['hadoop::common::config'] -> 
   Class['hadoop::frontend']
@@ -203,7 +240,10 @@ node 'droverlord' {
   # mysql client
   include mysql::client
   # druid indexing overlord
-  include druid::indexing::overlord
+  class { 'druid::indexing::overlord' :
+    service => 'overlord',
+    runner_type => 'remote'
+  }
 
   Class['hadoop::common::config'] -> 
   Class['hadoop::frontend']
@@ -219,7 +259,25 @@ node 'drmiddle' {
   # mysql client
   include mysql::client
   # druid indexing middle manager
-  include druid::indexing::middle_manager
+  class { 'druid::indexing::middle_manager':
+    service => 'middlemanager',
+    host => "${fqdn}",
+    task_base_dir => '/tmp/druid',
+    task_base_task_dir => '/tmp/druid/persistent/tasks',
+    worker_ip => "${ipaddress}",
+    fork_properties => {
+      "druid.processing.numThreads" => 4,
+    }
+  }
+
+  file { "/var/log/druid":
+        ensure  => directory,
+        mode    => 'u=rwx,go=rx'
+  } ->
+  file { "/var/log/druid/indexing":
+        ensure  => directory,
+        mode    => 'u=rwx,go=rx'
+  }
 
   Class['hadoop::common::config'] -> 
   Class['hadoop::frontend']
@@ -235,7 +293,10 @@ node 'drrealtime' {
   # mysql client
   include mysql::client
   # druid realtime
-  include druid::realtime
+  class { 'druid::realtime':
+    service => 'realtime',
+    processing_num_threads => 4,
+  }
 
   Class['hadoop::common::config'] -> 
   Class['hadoop::frontend']
@@ -245,6 +306,7 @@ node 'drrealtime' {
 node 'client' {
   include hadoop_config
   include spark_config
+  include druid_config
 
   # client
   include hadoop::frontend
